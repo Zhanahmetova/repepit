@@ -4,7 +4,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
   const user =  useAuthStore(); 
   const whiteList = ['/login', '/register'];
 
-  if ((!user?.user || !user?.token) && !whiteList.includes(to.path)) {
+  if ((!user?.token) && !whiteList.includes(to.path)) {
     return navigateTo('/login');
   }
 });

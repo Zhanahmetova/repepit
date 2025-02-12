@@ -1,3 +1,5 @@
+import type { User } from "./user";
+
 export interface Word {
     id: number;
     title: string;
@@ -5,6 +7,8 @@ export interface Word {
     pronunciation: string;
     createdAt: string;
     updatedAt: string;
+    documentId: string;
+    favorites: Favorite[];
 }
 
 export interface TResponse<T> {
@@ -17,4 +21,14 @@ export interface TResponse<T> {
             total: number;
         };
     };
+}
+
+export interface Favorite {
+    id: number;
+    documentId: string;
+    createdAt: string;
+    updatedAt: string;
+    publishedAt: string;
+    user_id?: User;
+    word_id?: Word;
 }

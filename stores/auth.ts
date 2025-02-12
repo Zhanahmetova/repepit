@@ -61,6 +61,8 @@ export const useAuthStore = defineStore('auth', {
     logout() {
       this.token = null;
       this.user = null;
+      useCookie('access_token').value = null;
+      navigateTo('/login');
     },
   },
 });
