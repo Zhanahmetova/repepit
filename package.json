@@ -1,0 +1,31 @@
+{
+  "name": "repepit",
+  "private": true,
+  "type": "module",
+  "author": "Zhanel Zhanakhmetova",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxt/ui": "2.21.0",
+    "@pinia/nuxt": "^0.10.0",
+    "nuxt": "^3.15.4",
+    "pinia": "^3.0.0",
+    "vue": "latest",
+    "vue-router": "latest"
+  },
+  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610",
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "eslint": "^9.20.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-vue": "^9.32.0",
+    "globals": "^15.14.0",
+    "prettier": "3.5.0",
+    "typescript-eslint": "^8.24.0"
+  }
+}
