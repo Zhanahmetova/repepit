@@ -1,19 +1,12 @@
 <template>
   <div class="flex flex-col items-center justify-center my-10">
-    <h1
-      class="text-2xl font-bold cursor-pointer flex items-center gap-2"
-      @click="playAudio"
-    >
-      Repepit
-      <UIcon v-if="!isPlaying" name="i-heroicons-play" class="w-5 h-5" />
-      <UIcon v-else name="i-heroicons-pause" class="w-5 h-5" />
-    </h1>
 
-    <audio ref="audio" id="audio" src="/repepepepit.mp3"></audio>
+    <UButton to="/training">Training</UButton>
 
-    <ul class="flex flex-col gap-4 w-full mt-4">
-      <li v-for="word in data?.data" :key="word.id" class="relative">
-        <UCard>
+
+    <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full my-4">
+      <li v-for="(word) in data?.data" :key="word.id">
+        <UCard class="relative pr-6">
           <div class="flex flex-col gap-2 basis-1/2">
             <h2 class="text-xl font-bold">{{ word.title }}</h2>
             <hr class="w-full border-gray-500" />
@@ -31,7 +24,7 @@
           <UButton
             variant="ghost"
             @click="toggleFavorite(word)"
-            class="absolute top-0 right-0 m-4"
+            class="absolute top-0 right-0 p-4"
           >
             <UIcon
               v-if="isFavorite(word)"
@@ -43,6 +36,7 @@
         </UCard>
       </li>
     </ul>
+      <UPagination v-model="page" :page-count="data?.meta.pagination.pageSize || 0" :total="data?.meta.pagination.total || 0" />
   </div>
 </template>
 <script setup lang="ts">
@@ -52,13 +46,22 @@ import { useFavorites } from "~/composables/favorites";
 
 const toast = useToast();
 const authStore = useAuthStore();
-const audio = ref<HTMLAudioElement | null>(null);
-const isPlaying = ref(false);
+
+
+const page = ref(1);
+
+
 
 const { data, error } = useLazyAsyncData<TResponse<Word>>("words", () =>
   $fetch<TResponse<Word>>(
-    "http://localhost:1337/api/words?populate[favorites][populate]=user_id&populate[favorites][populate]=word_id"
-  )
+    `http://localhost:1337/api/words?populate[favorites][populate]=user&populate[favorites][populate]=word&pagination[page]=${page.value}&pagination[pageSize]=21`,
+    {headers: {
+      "Authorization": `Bearer ${authStore.token}`}
+    }
+  ),
+  {
+    watch: [page],
+  }
 );
 
 if (error.value) {
@@ -69,15 +72,6 @@ if (error.value) {
   });
 }
 
-const playAudio = () => {
-  if (isPlaying.value) {
-    audio.value?.pause();
-    isPlaying.value = false;
-  } else {
-    audio.value?.play();
-    isPlaying.value = true;
-  }
-};
 
 const { toggleFavorite, isFavorite } = useFavorites();
 </script>

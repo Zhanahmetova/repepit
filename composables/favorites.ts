@@ -10,9 +10,12 @@ export const useFavorites = () => {
         "http://localhost:1337/api/favorites",
         {
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+          },
           body: {
             data: {
-              user_id: {
+              user: {
                 connect: [
                   {
                     id: authStore.user?.id,
@@ -20,7 +23,7 @@ export const useFavorites = () => {
                   },
                 ],
               },
-              word_id: {
+              word: {
                 connect: [{ id: word.id, documentId: word.documentId }],
               },
             },
@@ -44,7 +47,7 @@ export const useFavorites = () => {
 
   const isFavorite = (word: Word) => {
     return word.favorites.some(
-      (favorite) => favorite.user_id?.id === authStore.user?.id
+      (favorite) => favorite.user?.id === authStore.user?.id
     );
   };
 
@@ -54,6 +57,9 @@ export const useFavorites = () => {
         `http://localhost:1337/api/favorites/${id}`,
         {
           method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+          },
         }
       );
 

@@ -9,6 +9,8 @@ export interface Word {
     updatedAt: string;
     documentId: string;
     favorites: Favorite[];
+    translation: string;
+    alternative_translations?: string[];
 }
 
 export interface TResponse<T> {
@@ -29,6 +31,10 @@ export interface Favorite {
     createdAt: string;
     updatedAt: string;
     publishedAt: string;
-    user_id?: User;
-    word_id?: Word;
+    user?: User;
+    word?: Word;
+    ease_factor: number;
+    interval: number;
+    repetition: number;
+    next_review: string;
 }
