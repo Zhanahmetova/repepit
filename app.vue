@@ -2,7 +2,11 @@
   <div>
     <UContainer>
       <div class="flex justify-between my-5 gap-4">
-        <div/>
+        <div class="flex items-center gap-4">
+          <UButton color="gray" variant="link" to="/">Main</UButton>
+          <UButton color="gray" variant="link" to="/training">Training</UButton>
+        </div>
+
         <h1
           class="text-2xl font-bold cursor-pointer flex items-center gap-2 h-[60px]"
           @click="playAudio"

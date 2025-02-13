@@ -5,9 +5,8 @@
         v-if="trainingMode === 'multipleChoice'"
         class="flex flex-col gap-3 mt-4"
       >
-        <UCard class="mb-4">
-          <p>{{ currentWord?.title }}</p>
-        </UCard>
+			<MiniCard v-if="currentWord" :word="currentWord" />
+
         <UButton
           v-for="option in shuffledOptions"
           :key="option"
@@ -43,7 +42,7 @@
             variant="solid"
             color="gray"
             type="submit"
-            class="btn"
+            class="mt-4 w-full"
             >Проверить</UButton
           >
         </UForm>
@@ -54,9 +53,7 @@
       </p>
 
       <div v-else-if="trainingMode === 'default'">
-        <UCard class="mb-4">
-          <p>{{ currentWord?.title }}</p>
-        </UCard>
+        <MiniCard v-if="currentWord" :word="currentWord" />
         <div class="flex gap-4 mt-4">
           <UButton
             size="xl"
@@ -98,12 +95,28 @@
         </UButton>
       </UCard>
     </UModal>
+		<UCard class="mt-4 p-4">
+			<h2 class="text-lg font-bold">Статистика</h2>
+			<p>Правильные ответы: {{ stats.correct }}</p>
+			<p>Ошибки: {{ stats.incorrect }}</p>
+			<p>Процент успеха: {{ successRate }}%</p>
+			<p>Выученные слова: {{ learnedWords.length }}</p>
+		</UCard>
+
+		<UCard v-if="learnedWords.length" class="mt-4 p-4">
+			<h2 class="text-lg font-bold">Выученные слова</h2>
+			<ul>
+				<li v-for="favorite in learnedWords" :key="favorite.id">{{ favorite.word?.title }}</li>
+			</ul>
+		</UCard>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useAuthStore } from "~/stores/auth";
 import type { TResponse, Favorite, Word } from "~/types/word";
+import levenshteinDistance from "~/utils/levensteinDistance";
+import MiniCard from "~/components/word/MiniCard.vue";
 
 const authStore = useAuthStore();
 const words = useState<Favorite[]>(() => []);
@@ -119,10 +132,29 @@ const formState = ref({
 const showErrorModal = ref(false);
 const correctAnswer = ref("");
 
+const stats = reactive({
+  correct: 0,
+  incorrect: 0,
+});
+
+function updateStats(isCorrect: boolean) {
+  if (isCorrect) {
+    stats.correct++;
+  } else {
+    stats.incorrect++;
+  }
+}
+
+const successRate = computed(() => {
+  const total = stats.correct + stats.incorrect;
+  return total === 0 ? 0 : Math.round((stats.correct / total) * 100);
+});
+
 const query = new URLSearchParams({
   "filters[user][$eq]": authStore.user?.id || "",
   "filters[$or][0][next_review][$lte]": new Date().toISOString(),
   "filters[$or][1][next_review][$null]": "true",
+  "filters[is_learned][$ne]": "true", // Исключаем выученные слова
 }).toString();
 
 const { data, error } = useLazyAsyncData<TResponse<Favorite>>(
@@ -142,6 +174,8 @@ const { data, error } = useLazyAsyncData<TResponse<Favorite>>(
 );
 
 const currentWord = computed<Word | null>(() => words.value[0]?.word || null);
+
+const learnedWords = computed(() => words.value.filter(word => word.is_learned));
 
 // Перемешивание вариантов ответа
 function shuffleArray(array: string[]) {
@@ -165,20 +199,27 @@ watch(currentWord, () => {
   }
 });
 
-// Проверка ответа при вводе текста
-async function checkTyping() {
+
+
+
+// Проверка ответа при вводе текста с учетом опечаток
+function checkTyping() {
   if (!currentWord.value) return;
 
-  if (
-    userInput.value.toLowerCase().trim() ===
-    currentWord.value.translation.toLowerCase()
-  ) {
-    feedbackMessage.value = "✅ Correct!";
+  const userAnswer = userInput.value.trim().toLowerCase();
+  const correctAnswer = currentWord.value.translation.trim().toLowerCase();
+
+  const distance = levenshteinDistance(userAnswer, correctAnswer);
+  const maxTolerance = Math.floor(correctAnswer.length * 0.2); // Допускаем 20% ошибок
+
+  if (distance <= maxTolerance) {
+    feedbackMessage.value = "✅ Правильно (с учетом опечаток)!";
     feedbackClass.value = "text-green-500";
-    await updateWordProgress(5);
+    updateStats(true);
+    updateWordProgress(5);
   } else {
-    correctAnswer.value = currentWord.value.title;
-    showErrorModal.value = true; // Показываем окно
+    updateStats(false);
+    showErrorModal.value = true;
   }
 }
 
@@ -189,14 +230,15 @@ async function checkMultipleChoice(option: string) {
   if (option === currentWord.value.translation) {
     feedbackMessage.value = "✅ Correct!";
     feedbackClass.value = "text-green-500";
-    await updateWordProgress(5);
+    updateStats(true);
+    updateWordProgress(5);
   } else {
+    updateStats(false);
     correctAnswer.value = currentWord.value.translation;
     showErrorModal.value = true; // Показываем окно
   }
 }
 
-// Обновление прогресса
 async function updateWordProgress(grade: number) {
   if (!currentWord.value) return;
 
@@ -206,6 +248,7 @@ async function updateWordProgress(grade: number) {
   let easeFactor = wordProgress.ease_factor || 2.5;
   let interval = wordProgress.interval || 1;
   let repetition = wordProgress.repetition || 0;
+  let isLearned = wordProgress.is_learned || false;
 
   if (grade >= 3) {
     if (repetition === 0) interval = 1;
@@ -218,6 +261,11 @@ async function updateWordProgress(grade: number) {
     repetition = 0;
     interval = 1;
     easeFactor = 2.5;
+  }
+
+  // Если слово повторено 5 раз подряд без ошибок, оно считается выученным
+  if (repetition >= 5) {
+    isLearned = true;
   }
 
   const nextReview = new Date();
@@ -234,6 +282,7 @@ async function updateWordProgress(grade: number) {
         repetition,
         ease_factor: easeFactor,
         interval,
+        is_learned: isLearned, // Обновляем флаг
       },
     }),
   });

@@ -42,4 +42,5 @@ export interface Favorite {
     interval: number;
     repetition: number;
     next_review: string;
+    is_learned: boolean;
 }
