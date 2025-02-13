@@ -1,6 +1,6 @@
 {
     "editor.formatOnSave": true,
-    "editor.formatOnSaveMode": "modifications",
+    "editor.formatOnSaveMode": "file",
     "files.autoSave": "afterDelay",
     "eslint.run": "onSave",
     "eslint.codeActionsOnSave.rules": null,

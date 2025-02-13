@@ -1,45 +1,103 @@
 <template>
-  <div class="flex flex-col items-center justify-center my-10">
-    <div v-if="data?.data?.length">
-      <p>{{ currentWord?.title }}</p>
-
+  <div class="flex flex-col items-center justify-center my-10 w-1/2">
+    <div v-if="data?.data?.length" class="w-full">
       <div
         v-if="trainingMode === 'multipleChoice'"
-        class="flex flex-col gap-2 mt-4"
+        class="flex flex-col gap-3 mt-4"
       >
-        <button
+        <UCard class="mb-4">
+          <p>{{ currentWord?.title }}</p>
+        </UCard>
+        <UButton
           v-for="option in shuffledOptions"
           :key="option"
+          size="xl"
+          variant="solid"
+          color="gray"
           @click="checkMultipleChoice(option)"
           class="btn"
         >
           {{ option }}
-        </button>
+        </UButton>
       </div>
 
       <div
         v-else-if="trainingMode === 'typing'"
-        class="flex flex-col gap-2 mt-4"
+        class="flex flex-col gap-3 mt-4"
       >
-        <input
-          v-model="userInput"
-          type="text"
-          class="input"
-          placeholder="Введите ответ"
-        />
-        <button @click="checkTyping" class="btn">Проверить</button>
+        <UCard class="mb-4">
+          <p>{{ currentWord?.translation }}</p>
+        </UCard>
+        <UForm :state="formState" @submit="checkTyping">
+          <UInput
+            size="xl"
+            v-model="userInput"
+            type="text"
+            class="input"
+            variant="outline"
+            color="primary"
+            placeholder="Введите ответ"
+          />
+          <UButton
+            size="xl"
+            variant="solid"
+            color="gray"
+            type="submit"
+            class="btn"
+            >Проверить</UButton
+          >
+        </UForm>
       </div>
 
-      <p v-if="feedbackMessage" :class="feedbackClass">{{ feedbackMessage }}</p>
+      <p v-if="feedbackMessage" :class="feedbackClass" class="mt-4">
+        {{ feedbackMessage }}
+      </p>
 
-      <div v-else class="flex gap-4 mt-4">
-        <button @click="updateWordProgress(0)" class="btn">Не знаю</button>
-        <button @click="updateWordProgress(3)" class="btn">Затрудняюсь</button>
-        <button @click="updateWordProgress(5)" class="btn">Знаю</button>
+      <div v-else-if="trainingMode === 'default'">
+        <UCard class="mb-4">
+          <p>{{ currentWord?.title }}</p>
+        </UCard>
+        <div class="flex gap-4 mt-4">
+          <UButton
+            size="xl"
+            variant="solid"
+            color="gray"
+            @click="updateWordProgress(0)"
+            class="btn"
+            >Не знаю</UButton
+          >
+          <UButton
+            size="xl"
+            variant="solid"
+            color="gray"
+            @click="updateWordProgress(3)"
+            class="btn"
+            >Затрудняюсь</UButton
+          >
+          <UButton
+            size="xl"
+            variant="solid"
+            color="gray"
+            @click="updateWordProgress(5)"
+            class="btn"
+            >Знаю</UButton
+          >
+        </div>
       </div>
     </div>
 
-    <p v-else>Нет слов для повторения</p>
+    <p v-if="words.length === 0" class="text-gray-500">You have no words to repeat.</p>
+
+    <!-- Модальное окно при ошибке -->
+    <UModal v-model="showErrorModal">
+      <UCard>
+        <template #header> ❌ Wrong answer </template>
+        <p>Correct answer: <strong>{{ correctAnswer }}</strong></p>
+        <UButton size="xl" variant="solid" color="primary" @click="nextWord" class="mt-4">
+          Next (Enter)
+        </UButton>
+      </UCard>
+    </UModal>
   </div>
 </template>
 
@@ -53,20 +111,25 @@ const trainingMode = ref<"default" | "multipleChoice" | "typing">("default");
 const userInput = ref("");
 const feedbackMessage = ref("");
 const feedbackClass = ref("");
-const shuffledOptions = ref<string[]>([]);
+const shuffledOptions = useState<string[]>("shuffledOptions", () => []);
+const formState = ref({
+  userInput: "",
+});
+
+const showErrorModal = ref(false);
+const correctAnswer = ref("");
 
 const query = new URLSearchParams({
-  populate: "word",
   "filters[user][$eq]": authStore.user?.id || "",
-  "filters[$or][0][next_review][$lte]": new Date().toISOString(), // Показываем слова для повторения
-  "filters[$or][1][next_review][$null]": "true", // Также включаем слова без next_review (новые)
+  "filters[$or][0][next_review][$lte]": new Date().toISOString(),
+  "filters[$or][1][next_review][$null]": "true",
 }).toString();
 
 const { data, error } = useLazyAsyncData<TResponse<Favorite>>(
   "favorite-words",
   async () => {
     const res = await $fetch<TResponse<Favorite>>(
-      `http://localhost:1337/api/favorites?${query}`,
+      `http://localhost:1337/api/favorites?populate[word][populate][0]=alternative_translations&${query}`,
       {
         headers: {
           Authorization: `Bearer ${authStore.token}`,
@@ -78,16 +141,14 @@ const { data, error } = useLazyAsyncData<TResponse<Favorite>>(
   }
 );
 
-console.log(error.value);
-
 const currentWord = computed<Word | null>(() => words.value[0]?.word || null);
 
-// Функция перемешивания вариантов ответа
+// Перемешивание вариантов ответа
 function shuffleArray(array: string[]) {
   return array.sort(() => Math.random() - 0.5);
 }
 
-// Выбираем режим тренировки при смене слова
+// Выбор режима тренировки
 watch(currentWord, () => {
   if (!currentWord.value) return;
 
@@ -97,41 +158,41 @@ watch(currentWord, () => {
   if (randomMode === "multipleChoice") {
     shuffledOptions.value = shuffleArray([
       currentWord.value.translation,
-      ...(currentWord.value.alternative_translations || []),
+      ...(currentWord.value.alternative_translations?.map(
+        (translation) => translation.text
+      ) || []),
     ]);
   }
 });
 
-// Проверка ответа при ручном вводе
-function checkTyping() {
+// Проверка ответа при вводе текста
+async function checkTyping() {
   if (!currentWord.value) return;
 
   if (
     userInput.value.toLowerCase().trim() ===
     currentWord.value.translation.toLowerCase()
   ) {
-    feedbackMessage.value = "✅ Правильно!";
+    feedbackMessage.value = "✅ Correct!";
     feedbackClass.value = "text-green-500";
-    setTimeout(() => updateWordProgress(5), 1000);
+    await updateWordProgress(5);
   } else {
-    feedbackMessage.value = `❌ Неправильно! Правильный ответ: ${currentWord.value.translation}`;
-    feedbackClass.value = "text-red-500";
-    setTimeout(() => updateWordProgress(0), 2000);
+    correctAnswer.value = currentWord.value.title;
+    showErrorModal.value = true; // Показываем окно
   }
 }
 
 // Проверка ответа при выборе варианта
-function checkMultipleChoice(option: string) {
+async function checkMultipleChoice(option: string) {
   if (!currentWord.value) return;
 
   if (option === currentWord.value.translation) {
-    feedbackMessage.value = "✅ Правильно!";
+    feedbackMessage.value = "✅ Correct!";
     feedbackClass.value = "text-green-500";
-    setTimeout(() => updateWordProgress(5), 1000);
+    await updateWordProgress(5);
   } else {
-    feedbackMessage.value = "❌ Неправильно!";
-    feedbackClass.value = "text-red-500";
-    setTimeout(() => updateWordProgress(0), 2000);
+    correctAnswer.value = currentWord.value.translation;
+    showErrorModal.value = true; // Показываем окно
   }
 }
 
@@ -151,10 +212,7 @@ async function updateWordProgress(grade: number) {
     else if (repetition === 1) interval = 6;
     else interval = Math.round(interval * easeFactor);
 
-    easeFactor = Math.max(
-      1.3,
-      easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02))
-    );
+    easeFactor = Math.max(1.3, easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
     repetition += 1;
   } else {
     repetition = 0;
@@ -181,28 +239,20 @@ async function updateWordProgress(grade: number) {
   });
 
   words.value = words.value.slice(1);
-  userInput.value = "";
-  feedbackMessage.value = "";
 }
-</script>
 
-<style scoped>
-.btn {
-  padding: 8px 16px;
-  background-color: #3498db;
-  color: white;
-  border-radius: 5px;
-  cursor: pointer;
+// Закрываем модальное окно и переходим к следующему слову
+function nextWord() {
+  showErrorModal.value = false;
+  updateWordProgress(0);
 }
-.input {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-.text-green-500 {
-  color: green;
-}
-.text-red-500 {
-  color: red;
-}
-</style>
+
+// Реагируем на Enter
+onMounted(() => {
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && showErrorModal.value) {
+      nextWord();
+    }
+  });
+});
+</script>

@@ -4,13 +4,14 @@
       <div class="flex justify-between my-5 gap-4">
         <div/>
         <h1
-          class="text-2xl font-bold cursor-pointer flex items-center gap-2"
+          class="text-2xl font-bold cursor-pointer flex items-center gap-2 h-[60px]"
           @click="playAudio"
         >
           Repepit
-          <UIcon v-if="!isPlaying" name="i-heroicons-play" class="w-5 h-5" />
-          <UIcon v-else name="i-heroicons-pause" class="w-5 h-5" />
+          <UIcon v-if="!isPlaying" name="i-heroicons-play"  />
+          <Wave v-else name="i-heroicons-pause" />
         </h1>
+
         <audio ref="audio" id="audio" src="/repepepepit.mp3"></audio>
 
         <UDropdown
@@ -31,6 +32,8 @@
   </div>
 </template>
 <script setup lang="ts">
+import Wave from '~/components/Wave.vue';
+
 const authStore = useAuthStore();
 authStore.fetchUser();
 

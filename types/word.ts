@@ -1,5 +1,10 @@
 import type { User } from "./user";
 
+export interface AlternativeTranslation {
+    id: number;
+    text: string;
+}
+
 export interface Word {
     id: number;
     title: string;
@@ -10,7 +15,7 @@ export interface Word {
     documentId: string;
     favorites: Favorite[];
     translation: string;
-    alternative_translations?: string[];
+    alternative_translations?: AlternativeTranslation[];
 }
 
 export interface TResponse<T> {
