@@ -1,44 +1,51 @@
-import { defineStore } from 'pinia';
-import type { User, UserResponse } from '~/types/user';
+import { defineStore } from "pinia";
+import type { User, UserResponse } from "~/types/user";
 
-export const useAuthStore = defineStore('auth', {
+export const useAuthStore = defineStore("auth", {
   state: () => ({
     user: null as any,
-    token: useCookie('access_token'),
+    token: useCookie("access_token"),
+    userStatsId: null as string | null,
   }),
 
   actions: {
     async login(identifier: string, password: string) {
       try {
-        const { data } = await useFetch<UserResponse>('http://localhost:1337/api/auth/local', {
-          method: 'POST',
-          body: { identifier, password },
-        });
+        const { data } = await useFetch<UserResponse>(
+          "http://localhost:1337/api/auth/local",
+          {
+            method: "POST",
+            body: { identifier, password },
+          }
+        );
 
         if (data.value) {
           this.token = data.value?.jwt;
           this.user = data.value?.user;
-          useCookie('access_token').value = this.token;
+          useCookie("access_token").value = this.token;
         }
       } catch (error) {
-        console.error('Login failed:', error);
+        console.error("Login failed:", error);
       }
     },
 
     async register(username: string, email: string, password: string) {
       try {
-        const { data } = await useFetch<UserResponse>('http://localhost:1337/api/auth/local/register', {
-          method: 'POST',
-          body: { username, email, password },
-        });
+        const { data } = await useFetch<UserResponse>(
+          "http://localhost:1337/api/auth/local/register",
+          {
+            method: "POST",
+            body: { username, email, password },
+          }
+        );
 
         if (data.value) {
           this.token = data.value.jwt;
           this.user = data.value.user;
-          useCookie('access_token').value = this.token;
+          useCookie("access_token").value = this.token;
         }
       } catch (error) {
-        console.error('Registration failed:', error);
+        console.error("Registration failed:", error);
       }
     },
 
@@ -46,13 +53,16 @@ export const useAuthStore = defineStore('auth', {
       if (!this.token) return;
 
       try {
-        const { data } = await useFetch<User>('http://localhost:1337/api/users/me', {
-          headers: { Authorization: `Bearer ${this.token}` },
-        });
+        const { data } = await useFetch<User>(
+          "http://localhost:1337/api/users/me",
+          {
+            headers: { Authorization: `Bearer ${this.token}` },
+          }
+        );
 
         this.user = data.value;
       } catch (error) {
-        console.error('Failed to fetch user:', error);
+        console.error("Failed to fetch user:", error);
         this.token = null;
         this.user = null;
       }
@@ -61,8 +71,8 @@ export const useAuthStore = defineStore('auth', {
     logout() {
       this.token = null;
       this.user = null;
-      useCookie('access_token').value = null;
-      navigateTo('/login');
+      useCookie("access_token").value = null;
+      navigateTo("/login");
     },
   },
 });

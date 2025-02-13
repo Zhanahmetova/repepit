@@ -1,114 +1,123 @@
 <template>
   <div class="flex flex-col items-center justify-center my-10 w-1/2">
-    <div v-if="data?.data?.length" class="w-full">
-      <div
-        v-if="trainingMode === 'multipleChoice'"
-        class="flex flex-col gap-3 mt-4"
+    <!-- Если у пользователя нет слов, показываем новую страницу -->
+    <div v-if="isNewUser">
+      <h1 class="text-xl font-bold mb-4">Start training</h1>
+      <p class="text-gray-500">Check your favorite words</p>
+      <UButton
+        @click="goToTraining"
+        size="xl"
+        color="primary"
+        variant="outline"
+        class="mt-4 w-[100%]"
+        >Start</UButton
       >
-			<MiniCard v-if="currentWord" :word="currentWord" />
-
-        <UButton
-          v-for="option in shuffledOptions"
-          :key="option"
-          size="xl"
-          variant="solid"
-          color="gray"
-          @click="checkMultipleChoice(option)"
-          class="btn"
-        >
-          {{ option }}
-        </UButton>
-      </div>
-
-      <div
-        v-else-if="trainingMode === 'typing'"
-        class="flex flex-col gap-3 mt-4"
-      >
-        <UCard class="mb-4">
-          <p>{{ currentWord?.translation }}</p>
-        </UCard>
-        <UForm :state="formState" @submit="checkTyping">
-          <UInput
-            size="xl"
-            v-model="userInput"
-            type="text"
-            class="input"
-            variant="outline"
-            color="primary"
-            placeholder="Введите ответ"
-          />
-          <UButton
-            size="xl"
-            variant="solid"
-            color="gray"
-            type="submit"
-            class="mt-4 w-full"
-            >Проверить</UButton
-          >
-        </UForm>
-      </div>
-
-      <p v-if="feedbackMessage" :class="feedbackClass" class="mt-4">
-        {{ feedbackMessage }}
-      </p>
-
-      <div v-else-if="trainingMode === 'default'">
-        <MiniCard v-if="currentWord" :word="currentWord" />
-        <div class="flex gap-4 mt-4">
-          <UButton
-            size="xl"
-            variant="solid"
-            color="gray"
-            @click="updateWordProgress(0)"
-            class="btn"
-            >Не знаю</UButton
-          >
-          <UButton
-            size="xl"
-            variant="solid"
-            color="gray"
-            @click="updateWordProgress(3)"
-            class="btn"
-            >Затрудняюсь</UButton
-          >
-          <UButton
-            size="xl"
-            variant="solid"
-            color="gray"
-            @click="updateWordProgress(5)"
-            class="btn"
-            >Знаю</UButton
-          >
-        </div>
-      </div>
     </div>
 
-    <p v-if="words.length === 0" class="text-gray-500">You have no words to repeat.</p>
+    <div v-else class="w-full">
+      <div v-if="words.length" class="w-full">
+        <div
+          v-if="trainingMode === 'multipleChoice'"
+          class="flex flex-col gap-3 mt-4"
+        >
+          <MiniCard v-if="currentWord" :word="currentWord" />
+
+          <UButton
+            v-for="option in shuffledOptions"
+            :key="option"
+            size="xl"
+            variant="solid"
+            color="gray"
+            @click="checkMultipleChoice(option)"
+            class="btn"
+          >
+            {{ option }}
+          </UButton>
+        </div>
+
+        <div
+          v-else-if="trainingMode === 'typing'"
+          class="flex flex-col gap-3 mt-4"
+        >
+          <UCard class="mb-4">
+            <p>{{ currentWord?.translation }}</p>
+          </UCard>
+          <UForm :state="formState" @submit="checkTyping">
+            <UInput
+              size="xl"
+              v-model="userInput"
+              type="text"
+              class="input"
+              variant="outline"
+              color="primary"
+              placeholder="Enter your answer"
+            />
+            <UButton
+              size="xl"
+              variant="solid"
+              color="gray"
+              type="submit"
+              class="mt-4 w-[100%]"
+              >Check</UButton
+            >
+          </UForm>
+        </div>
+
+        <p v-if="feedbackMessage" :class="feedbackClass" class="mt-4">
+          {{ feedbackMessage }}
+        </p>
+
+        <div v-else-if="trainingMode === 'default'">
+          <MiniCard v-if="currentWord" :word="currentWord" />
+          <div class="flex gap-4 mt-4">
+            <UButton
+              size="xl"
+              variant="solid"
+              color="gray"
+              @click="updateWordProgress(0)"
+              class="btn"
+              >I don't know</UButton
+            >
+            <UButton
+              size="xl"
+              variant="solid"
+              color="gray"
+              @click="updateWordProgress(3)"
+              class="btn"
+              >I'm struggling</UButton
+            >
+            <UButton
+              size="xl"
+              variant="solid"
+              color="gray"
+              @click="updateWordProgress(5)"
+              class="btn"
+              >I know</UButton
+            >
+          </div>
+        </div>
+      </div>
+      <!-- Обычная логика тренировки -->
+    </div>
 
     <!-- Модальное окно при ошибке -->
     <UModal v-model="showErrorModal">
       <UCard>
         <template #header> ❌ Wrong answer </template>
-        <p>Correct answer: <strong>{{ correctAnswer }}</strong></p>
-        <UButton size="xl" variant="solid" color="primary" @click="nextWord" class="mt-4">
+        <p>
+          Correct answer: <strong>{{ correctAnswer }}</strong>
+        </p>
+        <UButton
+          size="xl"
+          variant="solid"
+          color="primary"
+          @click="nextWord"
+          class="mt-4"
+        >
           Next (Enter)
         </UButton>
       </UCard>
     </UModal>
-		<UCard class="mt-4 p-4">
-			<h2 class="text-lg font-bold">Статистика</h2>
-			<p>Правильные ответы: {{ stats.correct }}</p>
-			<p>Ошибки: {{ stats.incorrect }}</p>
-			<p>Процент успеха: {{ successRate }}%</p>
-			<p>Выученные слова: {{ learnedWords.length }}</p>
-		</UCard>
-
-		<UCard v-if="learnedWords.length" class="mt-4 p-4">
-			<h2 class="text-lg font-bold">Выученные слова</h2>
-			<ul>
-				<li v-for="favorite in learnedWords" :key="favorite.id">{{ favorite.word?.title }}</li>
-			</ul>
-		</UCard>
   </div>
 </template>
 
@@ -119,7 +128,7 @@ import levenshteinDistance from "~/utils/levensteinDistance";
 import MiniCard from "~/components/word/MiniCard.vue";
 
 const authStore = useAuthStore();
-const words = useState<Favorite[]>(() => []);
+const words = useState<Favorite[]>("words", () => []);
 const trainingMode = ref<"default" | "multipleChoice" | "typing">("default");
 const userInput = ref("");
 const feedbackMessage = ref("");
@@ -128,54 +137,106 @@ const shuffledOptions = useState<string[]>("shuffledOptions", () => []);
 const formState = ref({
   userInput: "",
 });
-
+const toast = useToast();
 const showErrorModal = ref(false);
 const correctAnswer = ref("");
 
-const stats = reactive({
-  correct: 0,
-  incorrect: 0,
-});
+const isNewUser = computed(() => words.value.length === 0);
 
-function updateStats(isCorrect: boolean) {
-  if (isCorrect) {
-    stats.correct++;
-  } else {
-    stats.incorrect++;
-  }
+const { updateStats } = useStatistics();
+
+function goToTraining() {
+  trainingMode.value = "default";
 }
 
-const successRate = computed(() => {
-  const total = stats.correct + stats.incorrect;
-  return total === 0 ? 0 : Math.round((stats.correct / total) * 100);
-});
-
 const query = new URLSearchParams({
-  "filters[user][$eq]": authStore.user?.id || "",
+  "filters[user][$eq]": authStore.user?.documentId || "",
   "filters[$or][0][next_review][$lte]": new Date().toISOString(),
   "filters[$or][1][next_review][$null]": "true",
   "filters[is_learned][$ne]": "true", // Исключаем выученные слова
 }).toString();
 
-const { data, error } = useLazyAsyncData<TResponse<Favorite>>(
+const favoritesData = useLazyAsyncData(
   "favorite-words",
-  async () => {
-    const res = await $fetch<TResponse<Favorite>>(
-      `http://localhost:1337/api/favorites?populate[word][populate][0]=alternative_translations&${query}`,
-      {
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
+  async (): Promise<TResponse<Favorite>> => {
+    try {
+      const res = await $fetch<TResponse<Favorite>>(
+        `http://localhost:1337/api/favorites?populate[word][populate][0]=alternative_translations&${query}`,
+        {
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+          },
+        }
+      );
+
+      if (res.data.length > 0) {
+        words.value = res.data.map((word) => ({
+          ...word,
+          id: word.id || 0, // Если `id` undefined, подставляем 0
+          ease_factor: 2.5,
+          interval: 1,
+          repetition: 0,
+          next_review: new Date().toISOString(),
+          is_learned: false,
+        }));
+        return res;
       }
-    );
-    words.value = res.data;
-    return res;
+
+      // Если избранных слов нет, возвращаем пустой массив
+      return {
+        data: [],
+        meta: { pagination: { page: 1, pageSize: 10, pageCount: 1, total: 0 } },
+      };
+    } catch (err) {
+      console.error("Error fetching favorites:", err);
+      return {
+        data: [],
+        meta: { pagination: { page: 1, pageSize: 10, pageCount: 1, total: 0 } },
+      };
+    }
   }
 );
 
-const currentWord = computed<Word | null>(() => words.value[0]?.word || null);
+// Если `favoritesData` пустой, загружаем слова из `words`
+watchEffect(async () => {
+  if (favoritesData?.data?.value?.data?.length === 0) {
+    try {
+      const wordsRes = await $fetch<TResponse<Word>>(
+        `http://localhost:1337/api/words?populate=alternative_translations`,
+        {
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+          },
+        }
+      );
 
-const learnedWords = computed(() => words.value.filter(word => word.is_learned));
+      words.value = wordsRes.data.map((word) => ({
+        ...word,
+        ease_factor: 2.5,
+        interval: 1,
+        repetition: 0,
+        next_review: new Date().toISOString(),
+        is_learned: false,
+      }));
+    } catch (err) {
+      console.error("Error fetching words:", err);
+    }
+  }
+});
+
+const currentWord = computed<Word | null>(() => {
+  if (!words.value.length) return null;
+
+  const firstItem = words.value[0];
+
+  // Если это объект `Favorite`, берем `word` (связанное слово)
+  if ("word" in firstItem) {
+    return firstItem.word as Word;
+  }
+
+  // Если это объект `Word`, просто возвращаем его
+  return firstItem as Word;
+});
 
 // Перемешивание вариантов ответа
 function shuffleArray(array: string[]) {
@@ -198,9 +259,6 @@ watch(currentWord, () => {
     ]);
   }
 });
-
-
-
 
 // Проверка ответа при вводе текста с учетом опечаток
 function checkTyping() {
@@ -239,11 +297,38 @@ async function checkMultipleChoice(option: string) {
   }
 }
 
+async function addToFavorites(word?: Word) {
+  if (!word) return;
+  try {
+    await $fetch("http://localhost:1337/api/favorites", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${authStore.token}`,
+        "Content-Type": "application/json",
+      },
+      body: {
+        data: {
+          user: { connect: [authStore.user] },
+          word: { connect: [word] },
+          repetition: 0,
+          ease_factor: 2.5,
+          interval: 1,
+          next_review: new Date().toISOString(),
+        },
+      },
+    });
+
+    console.log(`✅ Word "${word.title}" added to favorites`);
+  } catch (error) {
+    console.error("❌ Error adding word to favorites:", error);
+  }
+}
+
 async function updateWordProgress(grade: number) {
   if (!currentWord.value) return;
 
-  const wordProgress = words.value[0];
-  const progressId = words.value[0].documentId;
+  let wordProgress = words.value[0];
+  const progressId = wordProgress.id;
 
   let easeFactor = wordProgress.ease_factor || 2.5;
   let interval = wordProgress.interval || 1;
@@ -255,15 +340,22 @@ async function updateWordProgress(grade: number) {
     else if (repetition === 1) interval = 6;
     else interval = Math.round(interval * easeFactor);
 
-    easeFactor = Math.max(1.3, easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)));
+    easeFactor = Math.max(
+      1.3,
+      easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02))
+    );
     repetition += 1;
   } else {
     repetition = 0;
     interval = 1;
     easeFactor = 2.5;
+
+    // Если слово выбрано "Не знаю" или "Затрудняюсь" и оно не в избранном — добавляем его
+    if (!wordProgress.is_learned) {
+      await addToFavorites(wordProgress.word);
+    }
   }
 
-  // Если слово повторено 5 раз подряд без ошибок, оно считается выученным
   if (repetition >= 5) {
     isLearned = true;
   }
@@ -276,15 +368,15 @@ async function updateWordProgress(grade: number) {
     headers: {
       Authorization: `Bearer ${authStore.token}`,
     },
-    body: JSON.stringify({
+    body: {
       data: {
         next_review: nextReview.toISOString(),
         repetition,
         ease_factor: easeFactor,
         interval,
-        is_learned: isLearned, // Обновляем флаг
+        is_learned: isLearned,
       },
-    }),
+    },
   });
 
   words.value = words.value.slice(1);
