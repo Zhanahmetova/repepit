@@ -22,17 +22,23 @@
         >
           <MiniCard v-if="currentWord" :word="currentWord" />
 
-          <UButton
-            v-for="option in shuffledOptions"
-            :key="option"
-            size="xl"
-            variant="solid"
-            color="gray"
-            @click="checkMultipleChoice(option)"
-            class="btn"
-          >
-            {{ option }}
-          </UButton>
+          <template v-if="!isLoadingOptions">
+            <UButton
+              v-for="option in shuffledOptions"
+              :key="option"
+              size="xl"
+              variant="solid"
+              color="gray"
+              @click="checkMultipleChoice(option)"
+              class="btn"
+            >
+              {{ option }}
+            </UButton>
+          </template>
+
+          <template v-else>
+            <USkeleton class="h-12 w-full mb-2" v-for="n in 3" :key="n" />
+          </template>
         </div>
 
         <div
@@ -63,7 +69,17 @@
           </UForm>
         </div>
 
-        <p v-if="feedbackMessage" :class="feedbackClass" class="mt-4">
+        <div v-if="trainingMode === 'audio'" class="flex flex-col items-center">
+          <Audio
+            v-if="currentWord"
+            :currentWord="currentWord"
+            :shuffledOptions="shuffledOptions"
+            :checkAudioChoice="checkAudioChoice"
+            :isLoadingOptions="isLoadingOptions"
+          />
+        </div>
+
+        <p v-if="feedbackMessage" class="mt-4">
           {{ feedbackMessage }}
         </p>
 
@@ -125,6 +141,7 @@
 import { useAuthStore } from "~/stores/auth";
 import type { TResponse, Favorite, Word } from "~/types/word";
 import MiniCard from "~/components/word/MiniCard.vue";
+import Audio from "~/components/progress/Audio.vue";
 
 const authStore = useAuthStore();
 const words = useState<Favorite[]>("words", () => []);
@@ -132,16 +149,19 @@ const { updateStats } = useStatistics();
 const toast = useToast();
 const shuffledOptions = useState<string[]>("shuffledOptions", () => []);
 
-const trainingMode = ref<"default" | "multipleChoice" | "typing">("default");
+const trainingMode = useState<
+  "default" | "multipleChoice" | "typing" | "audio"
+>("trainingMode", () => "default");
+
+const showErrorModal = useState("showErrorModal", () => false);
+const feedbackMessage = useState("feedbackMessage");
 
 const userInput = ref("");
-const feedbackMessage = ref("");
-const feedbackClass = ref("");
 const formState = ref({
   userInput: "",
 });
-const showErrorModal = ref(false);
 const correctAnswer = ref("");
+const isLoadingOptions = ref(false);
 
 const currentWord = computed<Word | null>(() => {
   if (!words.value.length) return null;
@@ -161,22 +181,87 @@ const changeCorrectAnswer = (answer: string) => {
   correctAnswer.value = answer;
 };
 
+const isNewUser = useState("isNewUser");
+
+const { fetchSimilarWords } = useSimilarWords();
+
+const isFetching = ref(false);
+
+const selectNewWord = async (word: Word | undefined) => {
+  console.log({ word });
+
+  if (!word || isFetching.value) return;
+
+  isFetching.value = true;
+  isLoadingOptions.value = true; // Показываем Skeleton
+  console.log("Fetching similar words for:", word.title);
+
+  const incorrectOptions = await fetchSimilarWords(word.title);
+
+  while (incorrectOptions.length < 3) {
+    const randomWord =
+      words.value[Math.floor(Math.random() * words.value.length)]?.word?.title;
+    if (randomWord && !incorrectOptions.includes(randomWord)) {
+      incorrectOptions.push(randomWord);
+    }
+  }
+
+  await nextTick(); // Ensure DOM updates correctly before changing options
+  shuffledOptions.value = shuffleArray([word.title, ...incorrectOptions]);
+
+  console.log("Shuffled options:", shuffledOptions.value);
+  isFetching.value = false;
+  isLoadingOptions.value = false; // Скрываем Skeleton после загрузки
+};
+
+const nextWord = () => {
+  showErrorModal.value = false;
+
+  if (words.value.length > 1) {
+    words.value = words.value.slice(1);
+    // Выбираем случайный режим, включая новый "audio"
+    const modes: ("multipleChoice" | "typing" | "audio")[] = [
+      "multipleChoice",
+      "typing",
+      "audio",
+    ];
+    trainingMode.value = modes[Math.floor(Math.random() * modes.length)];
+
+    if (currentWord.value && trainingMode.value === "multipleChoice") {
+      shuffledOptions.value = shuffleArray([
+        currentWord.value?.translation,
+        ...(currentWord.value?.alternative_translations?.map(
+          (translation) => translation.text
+        ) || []),
+      ]);
+    }
+
+    if (trainingMode.value === "audio" && currentWord.value) {
+      selectNewWord(currentWord.value);
+    }
+  } else {
+    console.log("No more words to train!");
+  }
+};
+
+const updateWordsArray = (array: Favorite[]) => {
+  words.value = array;
+};
+
 const {
   checkTyping,
   checkMultipleChoice,
   updateWordProgress,
-  nextWord,
   favoritesData,
+  checkAudioChoice,
 } = useProgress({
   currentWord,
   userInput,
-  feedbackMessage,
-  feedbackClass,
   updateStats,
-  showErrorModal,
-  correctAnswer,
   words,
   changeCorrectAnswer,
+  nextWord,
+  updateWordsArray,
 });
 
 const onSubmit = async () => {
@@ -184,27 +269,17 @@ const onSubmit = async () => {
   userInput.value = "";
 };
 
-const isNewUser = computed(
-  () =>
-    !hasStartedTraining.value && favoritesData?.data?.value?.data?.length === 0
-);
-
 const hasStartedTraining = useState(
   "hasStartedTraining",
   () => favoritesData?.data?.value?.data?.length === 0
 );
-
-function goToTraining() {
-  trainingMode.value = "default";
-  hasStartedTraining.value = true; // Mark training as started
-}
 
 // Если `favoritesData` пустой, загружаем слова из `words`
 watchEffect(async () => {
   if (favoritesData?.data?.value?.data?.length === 0) {
     try {
       const wordsRes = await $fetch<TResponse<Word>>(
-        `http://localhost:1337/api/words?populate=alternative_translations`,
+        `http://localhost:1337/api/words`,
         {
           headers: {
             Authorization: `Bearer ${authStore.token}`,
@@ -231,29 +306,9 @@ function shuffleArray(array: string[]) {
   return array.sort(() => Math.random() - 0.5);
 }
 
-// Выбор режима тренировки
-watch(currentWord, () => {
-  if (!currentWord.value) return;
-
-  const randomMode = Math.random() > 0.5 ? "multipleChoice" : "typing";
-  trainingMode.value = randomMode;
-
-  if (randomMode === "multipleChoice") {
-    shuffledOptions.value = shuffleArray([
-      currentWord.value.translation,
-      ...(currentWord.value.alternative_translations?.map(
-        (translation) => translation.text
-      ) || []),
-    ]);
-  }
-});
-
-// Реагируем на Enter
-onMounted(() => {
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && showErrorModal.value) {
-      nextWord();
-    }
-  });
-});
+function goToTraining() {
+  console.log("goToTraining");
+  trainingMode.value = "default";
+  hasStartedTraining.value = true; // Mark training as started
+}
 </script>

@@ -1,6 +1,5 @@
 import type { Word } from "~/types/word";
 import levenshteinDistance from "~/utils/levensteinDistance";
-import type { AuthStore } from "~/types/auth";
 import type { TResponse } from "~/types/word";
 import type { Favorite } from "~/types/word";
 import { useAuthStore } from "~/stores/auth";
@@ -8,42 +7,47 @@ import { useAuthStore } from "~/stores/auth";
 export const useProgress = ({
   currentWord,
   userInput,
-  feedbackMessage,
-  feedbackClass,
   updateStats,
-  showErrorModal,
-  correctAnswer,
   words,
   changeCorrectAnswer,
+  nextWord,
+  updateWordsArray,
 }: {
   currentWord: Ref<Word | null>;
   userInput: Ref<string>;
-  feedbackMessage: Ref<string>;
-  feedbackClass: Ref<string>;
   updateStats: (isCorrect: boolean) => void;
-  showErrorModal: Ref<boolean>;
-  correctAnswer: Ref<string>;
   words: Ref<Favorite[]>;
   changeCorrectAnswer: (answer: string) => void;
+  nextWord: () => void;
+  updateWordsArray: (words: Favorite[]) => void;
 }) => {
   const authStore = useAuthStore();
+  const isNewUser = useState("isNewUser", () => false);
+  const toast = useToast();
+  const showErrorModal = useState("showErrorModal", () => false);
+  const feedbackMessage = useState("feedbackMessage", () => "");
+
   // Проверка ответа при вводе текста с учетом опечаток
   function checkTyping() {
     if (!currentWord.value) return;
 
     const userAnswer = userInput.value.trim().toLowerCase();
-    const correctAnswer = currentWord.value.translation.trim().toLowerCase();
+    const correctAnswer = currentWord.value.title.trim().toLowerCase();
 
     const distance = levenshteinDistance(userAnswer, correctAnswer);
     const maxTolerance = Math.floor(correctAnswer.length * 0.2); // Допускаем 20% ошибок
 
     if (distance <= maxTolerance) {
-      feedbackMessage.value = "✅ Правильно (с учетом опечаток)!";
-      feedbackClass.value = "text-green-500";
+      toast.add({
+        title: "Correct!",
+        description: "You are right!",
+        color: "green",
+      });
       updateStats(true);
       updateWordProgress(5);
     } else {
       updateStats(false);
+      changeCorrectAnswer(correctAnswer);
       showErrorModal.value = true;
     }
   }
@@ -53,14 +57,40 @@ export const useProgress = ({
     if (!currentWord.value) return;
 
     if (option === currentWord.value.translation) {
-      feedbackMessage.value = "✅ Correct!";
-      feedbackClass.value = "text-green-500";
+      toast.add({
+        title: "Correct!",
+        description: "You are right!",
+        color: "green",
+      });
       updateStats(true);
       updateWordProgress(5);
     } else {
       updateStats(false);
       changeCorrectAnswer(currentWord.value.translation);
       showErrorModal.value = true; // Показываем окно
+    }
+  }
+
+  async function checkAudioChoice(option: string) {
+    if (!currentWord.value) return;
+
+    if (option === currentWord.value.title) {
+      toast.add({
+        title: "Correct!",
+        description: "You are right!",
+        color: "green",
+      });
+      updateStats(true);
+      updateWordProgress(5);
+    } else {
+      toast.add({
+        title: "Wrong!",
+        description: "You are wrong!",
+        color: "red",
+      });
+      updateStats(false);
+      changeCorrectAnswer(currentWord.value.title);
+      showErrorModal.value = true;
     }
   }
 
@@ -146,19 +176,16 @@ export const useProgress = ({
           },
         },
       });
+      console.log("✅ Word progress updated");
+
+      feedbackMessage.value = "";
     } catch (error) {
       await addToFavorites(wordProgress as Word);
 
       console.log("❌ Error updating word progress:", { error });
     }
 
-    words.value = words.value.slice(1);
-  }
-
-  // Закрываем модальное окно и переходим к следующему слову
-  function nextWord() {
-    showErrorModal.value = false;
-    updateWordProgress(0);
+    nextWord();
   }
 
   const query = new URLSearchParams({
@@ -180,17 +207,22 @@ export const useProgress = ({
             },
           }
         );
+        if (res.data.length === 0) {
+          isNewUser.value = true;
+        }
 
         if (res.data.length > 0) {
-          words.value = res.data.map((word) => ({
-            ...word,
-            id: word.id || 0, // Если `id` undefined, подставляем 0
-            ease_factor: 2.5,
-            interval: 1,
-            repetition: 0,
-            next_review: new Date().toISOString(),
-            is_learned: false,
-          }));
+          updateWordsArray(
+            res.data.map((word) => ({
+              ...word,
+              id: word.id || 0, // Если `id` undefined, подставляем 0
+              ease_factor: 2.5,
+              interval: 1,
+              repetition: 0,
+              next_review: new Date().toISOString(),
+              is_learned: false,
+            }))
+          );
           return res;
         }
 
@@ -217,7 +249,7 @@ export const useProgress = ({
     checkTyping,
     checkMultipleChoice,
     updateWordProgress,
-    nextWord,
     favoritesData,
+    checkAudioChoice,
   };
 };
