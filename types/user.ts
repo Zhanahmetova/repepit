@@ -4,6 +4,7 @@ export interface User {
   email: string;
   provider: string;
   confirmed: boolean;
+  documentId: string;
 }
 
 export interface UserResponse {

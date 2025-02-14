@@ -46,12 +46,11 @@ export const useFavorites = () => {
   };
 
   const isFavorite = (word: Word) => {
-    return word.favorites.some(
-      (favorite) => favorite.user?.id === authStore.user?.id
-    );
+    return word.is_favorite;
   };
 
-  const removeFromFavorites = async (id: string) => {
+  const removeFromFavorites = async (id?: string) => {
+    if (!id) return;
     try {
       const { data } = await $fetch<TResponse<Favorite>>(
         `http://localhost:1337/api/favorites/${id}`,
@@ -70,18 +69,23 @@ export const useFavorites = () => {
         });
       }
     } catch (error) {
-      toast.add({
-        title: "Error removing word from favorites",
-        color: "red",
-      });
+      console.log({ error });
     }
   };
 
   const toggleFavorite = async (word: Word) => {
-    if (isFavorite(word)) {
-      await removeFromFavorites(word.favorites[0].documentId);
-    } else {
-      await addToFavorites(word);
+    const previousState = word.is_favorite; // Store the previous state
+    word.is_favorite = !word.is_favorite; // Optimistically update UI
+
+    try {
+      if (previousState) {
+        await removeFromFavorites(word.favorites?.[0]?.documentId);
+      } else {
+        await addToFavorites(word);
+      }
+    } catch (error) {
+      console.log({ error });
+      word.is_favorite = previousState; // Revert on failure
     }
   };
 

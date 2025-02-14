@@ -24,6 +24,7 @@ export interface Word {
   repetition?: number;
   next_review?: string;
   is_learned?: boolean;
+  is_favorite?: boolean;
 }
 
 export interface TResponse<T> {
