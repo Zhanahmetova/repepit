@@ -1,6 +1,5 @@
 <template>
   <div class="flex flex-col items-center justify-center my-10 w-1/2">
-    <!-- Если у пользователя нет слов, показываем новую страницу -->
     <div v-if="!hasStartedTraining">
       <h1 class="text-xl font-bold mb-4">Start training</h1>
       <p class="text-gray-500">Check your favorite words</p>
@@ -82,36 +81,6 @@
         <p v-if="feedbackMessage" class="mt-4">
           {{ feedbackMessage }}
         </p>
-
-        <div v-else-if="trainingMode === 'default'">
-          <MiniCard v-if="currentWord" :word="currentWord" />
-          <div class="flex gap-4 mt-4">
-            <UButton
-              size="xl"
-              variant="solid"
-              color="gray"
-              @click="updateWordProgress(0)"
-              class="btn"
-              >I don't know</UButton
-            >
-            <UButton
-              size="xl"
-              variant="solid"
-              color="gray"
-              @click="updateWordProgress(3)"
-              class="btn"
-              >I'm struggling</UButton
-            >
-            <UButton
-              size="xl"
-              variant="solid"
-              color="gray"
-              @click="updateWordProgress(5)"
-              class="btn"
-              >I know</UButton
-            >
-          </div>
-        </div>
       </div>
       <!-- Обычная логика тренировки -->
     </div>
@@ -145,7 +114,6 @@ import Audio from "~/components/progress/Audio.vue";
 
 const authStore = useAuthStore();
 const words = useState<Favorite[]>("words", () => []);
-const toast = useToast();
 const shuffledOptions = useState<string[]>("shuffledOptions", () => []);
 
 const trainingMode = useState<
@@ -247,20 +215,15 @@ const updateWordsArray = (array: Favorite[]) => {
   words.value = array;
 };
 
-const {
-  checkTyping,
-  checkMultipleChoice,
-  updateWordProgress,
-  favoritesData,
-  checkAudioChoice,
-} = useProgress({
-  currentWord,
-  userInput,
-  words,
-  changeCorrectAnswer,
-  nextWord,
-  updateWordsArray,
-});
+const { checkTyping, checkMultipleChoice, favoritesData, checkAudioChoice } =
+  useProgress({
+    currentWord,
+    userInput,
+    words,
+    changeCorrectAnswer,
+    nextWord,
+    updateWordsArray,
+  });
 
 const onSubmit = async () => {
   await checkTyping();

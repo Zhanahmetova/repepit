@@ -1,7 +1,7 @@
 import type { Word } from "~/types/word";
 import levenshteinDistance from "~/utils/levensteinDistance";
-import type { TResponse } from "~/types/word";
 import type { Favorite } from "~/types/word";
+import type { TResponse } from "~/types/word";
 import { useAuthStore } from "~/stores/auth";
 
 export const useProgress = ({
@@ -25,6 +25,7 @@ export const useProgress = ({
   const showErrorModal = useState("showErrorModal", () => false);
   const feedbackMessage = useState("feedbackMessage", () => "");
   const { updateStats } = useStatistics();
+  const favWords = useState<Favorite[]>("favorite-words");
 
   // Проверка ответа при вводе текста с учетом опечаток
   function checkTyping() {
@@ -148,7 +149,12 @@ export const useProgress = ({
 
       // Если слово выбрано "Не знаю" или "Затрудняюсь" и оно не в избранном — добавляем его
       if (!wordProgress.is_learned) {
-        await addToFavorites(wordProgress.word);
+        await addToFavorites({
+          ...wordProgress.word,
+          repetition,
+          interval,
+          ease_factor: easeFactor,
+        } as Word);
       }
     }
 
@@ -179,7 +185,12 @@ export const useProgress = ({
 
       feedbackMessage.value = "";
     } catch (error) {
-      await addToFavorites(wordProgress as Word);
+      await addToFavorites({
+        ...wordProgress.word,
+        repetition,
+        interval,
+        ease_factor: easeFactor,
+      } as Word);
 
       console.log("❌ Error updating word progress:", { error });
     }
@@ -187,60 +198,32 @@ export const useProgress = ({
     nextWord();
   }
 
-  const query = new URLSearchParams({
-    "filters[user][$eq]": authStore.user?.documentId || "",
-    "filters[$or][0][next_review][$lte]": new Date().toISOString(),
-    "filters[$or][1][next_review][$null]": "true",
-    "filters[is_learned][$ne]": "true", // Исключаем выученные слова
-  }).toString();
-
   const favoritesData = useLazyAsyncData(
     "favorite-words",
     async (): Promise<TResponse<Favorite>> => {
-      try {
-        const res = await $fetch<TResponse<Favorite>>(
-          `http://localhost:1337/api/favorites?populate[word][populate][0]=alternative_translations&${query}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authStore.token}`,
-            },
-          }
-        );
-        if (res.data.length === 0) {
-          isNewUser.value = true;
-        }
+      const { getFavorites } = useFavorites();
 
-        if (res.data.length > 0) {
-          updateWordsArray(
-            res.data.map((word) => ({
-              ...word,
-              id: word.id || 0, // Если `id` undefined, подставляем 0
-              ease_factor: 2.5,
-              interval: 1,
-              repetition: 0,
-              next_review: new Date().toISOString(),
-              is_learned: false,
-            }))
-          );
-          return res;
-        }
+      const res = await getFavorites();
 
-        // Если избранных слов нет, возвращаем пустой массив
-        return {
-          data: [],
-          meta: {
-            pagination: { page: 1, pageSize: 10, pageCount: 1, total: 0 },
-          },
-        };
-      } catch (err) {
-        console.error("Error fetching favorites:", err);
-        return {
-          data: [],
-          meta: {
-            pagination: { page: 1, pageSize: 10, pageCount: 1, total: 0 },
-          },
-        };
+      if (res.data.length === 0) {
+        isNewUser.value = true;
       }
+
+      if (res.data.length > 0) {
+        updateWordsArray(
+          res.data.map((word) => ({
+            ...word,
+            id: word.id || 0, // Если `id` undefined, подставляем 0
+            ease_factor: 2.5,
+            interval: 1,
+            repetition: 0,
+            next_review: new Date().toISOString(),
+            is_learned: false,
+          }))
+        );
+      }
+
+      return res;
     }
   );
 

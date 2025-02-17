@@ -87,6 +87,4 @@ if (error.value) {
 }
 
 const { toggleFavorite, isFavorite } = useFavorites();
-
-useStatistics();
 </script>
