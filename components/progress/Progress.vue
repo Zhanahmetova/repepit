@@ -111,6 +111,7 @@ import { useAuthStore } from "~/stores/auth";
 import type { TResponse, Favorite, Word } from "~/types/word";
 import MiniCard from "~/components/word/MiniCard.vue";
 import Audio from "~/components/progress/Audio.vue";
+import { useProgress } from "~/composables/progress";
 
 const authStore = useAuthStore();
 const words = useState<Favorite[]>("words", () => []);
@@ -118,7 +119,7 @@ const shuffledOptions = useState<string[]>("shuffledOptions", () => []);
 
 const trainingMode = useState<
   "default" | "multipleChoice" | "typing" | "audio"
->("trainingMode", () => "default");
+>("trainingMode", () => "typing");
 
 const showErrorModal = useState("showErrorModal", () => false);
 const feedbackMessage = useState("feedbackMessage");
@@ -147,8 +148,6 @@ const currentWord = computed<Word | null>(() => {
 const changeCorrectAnswer = (answer: string) => {
   correctAnswer.value = answer;
 };
-
-const isNewUser = useState("isNewUser");
 
 const { fetchSimilarWords } = useSimilarWords();
 
@@ -269,7 +268,7 @@ function shuffleArray(array: string[]) {
 
 function goToTraining() {
   console.log("goToTraining");
-  trainingMode.value = "default";
+  trainingMode.value = "typing";
   hasStartedTraining.value = true; // Mark training as started
 }
 </script>

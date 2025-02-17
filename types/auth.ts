@@ -5,6 +5,7 @@ export type AuthState = {
   user: User | null;
   token?: string | null;
   userStatsId: string | null;
+  userId: string | null;
 };
 
 export type AuthStore = ReturnType<typeof useAuthStore>;

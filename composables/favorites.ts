@@ -13,46 +13,33 @@ export const useFavorites = () => {
     };
   });
 
-  const addToFavorites = async (word: Word) => {
+  async function addToFavorites(word?: Word) {
+    if (!word) return;
     try {
-      const { data } = await $fetch<TResponse<Favorite>>(
-        "http://localhost:1337/api/favorites",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
+      await $fetch("http://localhost:1337/api/favorites", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+          "Content-Type": "application/json",
+        },
+        body: {
+          data: {
+            user: { connect: [authStore.user] },
+            word: { connect: [word] },
+            repetition: word.repetition || 0,
+            ease_factor: word.ease_factor || 2.5,
+            interval: word.interval || 1,
+            next_review: word.next_review || new Date().toISOString(),
+            is_learned: word.is_learned || false,
           },
-          body: {
-            data: {
-              user: {
-                connect: [
-                  {
-                    id: authStore.user?.id,
-                    documentId: authStore.user?.documentId,
-                  },
-                ],
-              },
-              word: {
-                connect: [{ id: word.id, documentId: word.documentId }],
-              },
-            },
-          },
-        }
-      );
-
-      if (data) {
-        toast.add({
-          title: "Word added to favorites",
-          color: "green",
-        });
-      }
-    } catch (error) {
-      toast.add({
-        title: "Error adding word to favorites",
-        color: "red",
+        },
       });
+
+      console.log(`✅ Word "${word.title}" added to favorites`);
+    } catch (error) {
+      console.error("❌ Error adding word to favorites:", error);
     }
-  };
+  }
 
   const isFavorite = (word: Word) => {
     return word.is_favorite;
@@ -132,35 +119,11 @@ export const useFavorites = () => {
     }
   };
 
-  const getFavoritesByUser = async () => {
-    try {
-      const res = await $fetch<TResponse<Favorite>>(
-        `http://localhost:1337/api/favorites?filters[$and][0][user][id][$eq]=${authStore.user?.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
-        }
-      );
-
-      return res;
-    } catch (err) {
-      console.error("Error fetching favorites:", err);
-      return {
-        data: [],
-        meta: {
-          pagination: { page: 1, pageSize: 10, pageCount: 1, total: 0 },
-        },
-      };
-    }
-  };
-
   return {
     getFavorites,
     addToFavorites,
     isFavorite,
     removeFromFavorites,
     toggleFavorite,
-    getFavoritesByUser,
   };
 };

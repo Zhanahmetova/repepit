@@ -6,7 +6,8 @@ export const useAuthStore = defineStore("auth", {
   state: (): AuthState => ({
     user: null as any,
     token: useCookie("access_token").value,
-    userStatsId: null as string | null,
+    userStatsId: null,
+    userId: useCookie("user_id").value || null,
   }),
 
   actions: {
@@ -23,7 +24,9 @@ export const useAuthStore = defineStore("auth", {
         if (data.value) {
           this.token = data.value?.jwt;
           this.user = data.value?.user;
+          this.userId = this.user?.id.toString() || null;
           useCookie("access_token").value = this.token;
+          useCookie("user_id").value = this.userId;
         }
       } catch (error) {
         console.error("Login failed:", error);
@@ -43,7 +46,10 @@ export const useAuthStore = defineStore("auth", {
         if (data.value) {
           this.token = data.value.jwt;
           this.user = data.value.user;
+          this.userId = this.user?.id.toString() || null;
+
           useCookie("access_token").value = this.token;
+          useCookie("user_id").value = this.userId;
         }
       } catch (error) {
         console.error("Registration failed:", error);
@@ -62,6 +68,8 @@ export const useAuthStore = defineStore("auth", {
         );
 
         this.user = data.value;
+        this.userId = this.user?.id.toString() || null;
+        useCookie("user_id").value = this.userId;
       } catch (error) {
         console.error("Failed to fetch user:", error);
         this.token = null;
@@ -72,7 +80,9 @@ export const useAuthStore = defineStore("auth", {
     logout() {
       this.token = null;
       this.user = null;
+      this.userId = null;
       useCookie("access_token").value = null;
+      useCookie("user_id").value = null;
       navigateTo("/login");
     },
   },

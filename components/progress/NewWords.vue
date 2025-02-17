@@ -35,6 +35,7 @@
 import { useAuthStore } from "~/stores/auth";
 import MiniCard from "~/components/word/MiniCard.vue";
 import type { Word, TResponse } from "~/types/word";
+import { useProgress } from "~/composables/progress";
 
 const authStore = useAuthStore();
 

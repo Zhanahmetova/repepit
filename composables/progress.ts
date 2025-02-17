@@ -3,6 +3,7 @@ import levenshteinDistance from "~/utils/levensteinDistance";
 import type { Favorite } from "~/types/word";
 import type { TResponse } from "~/types/word";
 import { useAuthStore } from "~/stores/auth";
+import { useSession } from "~/stores/session";
 
 export const useProgress = ({
   currentWord,
@@ -25,7 +26,8 @@ export const useProgress = ({
   const showErrorModal = useState("showErrorModal", () => false);
   const feedbackMessage = useState("feedbackMessage", () => "");
   const { updateStats } = useStatistics();
-  const favWords = useState<Favorite[]>("favorite-words");
+  const { setSessionWords, setSessionCompleted } = useSession();
+  const { addToFavorites } = useFavorites();
 
   // Проверка ответа при вводе текста с учетом опечаток
   function checkTyping() {
@@ -91,33 +93,6 @@ export const useProgress = ({
       updateStats(false);
       changeCorrectAnswer(currentWord.value.title);
       showErrorModal.value = true;
-    }
-  }
-
-  async function addToFavorites(word?: Word) {
-    if (!word) return;
-    try {
-      await $fetch("http://localhost:1337/api/favorites", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-          "Content-Type": "application/json",
-        },
-        body: {
-          data: {
-            user: { connect: [authStore.user] },
-            word: { connect: [word] },
-            repetition: 0,
-            ease_factor: 2.5,
-            interval: 1,
-            next_review: new Date().toISOString(),
-          },
-        },
-      });
-
-      console.log(`✅ Word "${word.title}" added to favorites`);
-    } catch (error) {
-      console.error("❌ Error adding word to favorites:", error);
     }
   }
 
@@ -210,17 +185,31 @@ export const useProgress = ({
       }
 
       if (res.data.length > 0) {
-        updateWordsArray(
-          res.data.map((word) => ({
-            ...word,
-            id: word.id || 0, // Если `id` undefined, подставляем 0
-            ease_factor: 2.5,
-            interval: 1,
-            repetition: 0,
-            next_review: new Date().toISOString(),
-            is_learned: false,
-          }))
-        );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const nextWords = res.data
+          .filter((fav: Favorite) => {
+            const reviewDate = new Date(fav.next_review || "");
+            const diffDays =
+              (reviewDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
+            return diffDays <= 3;
+          })
+          .sort(
+            (a, b) =>
+              new Date(a.next_review || "").getTime() -
+              new Date(b.next_review || "").getTime()
+          )
+          .slice(0, 12);
+
+        if (nextWords.length > 0) {
+          setSessionWords(nextWords);
+          setSessionCompleted(false);
+        } else {
+          setSessionCompleted(true);
+        }
+
+        updateWordsArray(nextWords);
       }
 
       return res;
