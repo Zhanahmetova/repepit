@@ -4,10 +4,13 @@ import { useAuthStore } from "~/stores/auth";
 
 export const useStatistics = () => {
   const authStore = useAuthStore();
+
   const stats = reactive({
     correct: 0,
     incorrect: 0,
   });
+
+  const isStatExists = useState<boolean>("isStatExists", () => false);
 
   const successRate = computed(() => {
     const total = stats.correct + stats.incorrect;
@@ -27,21 +30,22 @@ export const useStatistics = () => {
         body: {
           data: {
             user: { connect: [authStore.user] },
-            correct: 0,
-            incorrect: 0,
+            correct: stats.correct,
+            incorrect: stats.incorrect,
           },
         },
       }
     );
     // Сохраняем ID созданной записи
     authStore.userStatsId = createdStat?.data?.[0]?.documentId;
+    isStatExists;
   }
 
   // Получаем статистику из базы при входе
   async function fetchUserStats() {
     try {
       const res = await $fetch<TResponse<UserStats>>(
-        `http://localhost:1337/api/user-stats-list?filters[user][id][$eq]=${authStore.user?.documentId}`,
+        `http://localhost:1337/api/user-stats-list?populate=*&filters[$and][0][user][id][$eq]=${authStore.user?.id}`,
         {
           headers: {
             Authorization: `Bearer ${authStore.token}`,
@@ -52,10 +56,12 @@ export const useStatistics = () => {
       if (res.data.length) {
         stats.correct = res.data[0].correct || 0;
         stats.incorrect = res.data[0].incorrect || 0;
-      } else {
-        await createUserStats();
+        isStatExists.value = true;
       }
+
+      return res.data?.[0];
     } catch (error) {
+      isStatExists.value = false;
       console.error("Error fetching user stats:", error);
     }
   }
@@ -77,7 +83,7 @@ export const useStatistics = () => {
   async function saveUserStats() {
     try {
       const userStats = await $fetch<TResponse<UserStats>>(
-        `http://localhost:1337/api/user-stats-list?filters[user][id][$eq]=${authStore.user?.documentId}`,
+        `http://localhost:1337/api/user-stats-list?populate=*&filters[$and][0][user][id][$eq]=${authStore.user?.id}`,
         {
           headers: {
             Authorization: `Bearer ${authStore.token}`,
@@ -86,12 +92,16 @@ export const useStatistics = () => {
       );
 
       if (!userStats.data.length) {
-        console.error("No user stats found, creating new entry.");
+        console.error("No user stats found, creating new entry.", {
+          userStats,
+        });
         await createUserStats();
         return;
       }
 
       const statId = userStats.data[0].documentId;
+      console.log({ statId });
+
       console.log("Updating user stats:", statId);
 
       await $fetch(`http://localhost:1337/api/user-stats-list/${statId}`, {
@@ -100,12 +110,13 @@ export const useStatistics = () => {
           Authorization: `Bearer ${authStore.token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
+        body: {
           data: {
+            user: { connect: [authStore.user] },
             correct: stats.correct,
             incorrect: stats.incorrect,
           },
-        }),
+        },
       });
 
       console.log("User stats updated successfully!");
@@ -114,5 +125,5 @@ export const useStatistics = () => {
     }
   }
 
-  return { stats, successRate, updateStats };
+  return { stats, successRate, updateStats, fetchUserStats };
 };

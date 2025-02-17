@@ -145,7 +145,6 @@ import Audio from "~/components/progress/Audio.vue";
 
 const authStore = useAuthStore();
 const words = useState<Favorite[]>("words", () => []);
-const { updateStats } = useStatistics();
 const toast = useToast();
 const shuffledOptions = useState<string[]>("shuffledOptions", () => []);
 
@@ -257,7 +256,6 @@ const {
 } = useProgress({
   currentWord,
   userInput,
-  updateStats,
   words,
   changeCorrectAnswer,
   nextWord,

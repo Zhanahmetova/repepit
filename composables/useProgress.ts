@@ -7,7 +7,6 @@ import { useAuthStore } from "~/stores/auth";
 export const useProgress = ({
   currentWord,
   userInput,
-  updateStats,
   words,
   changeCorrectAnswer,
   nextWord,
@@ -15,7 +14,6 @@ export const useProgress = ({
 }: {
   currentWord: Ref<Word | null>;
   userInput: Ref<string>;
-  updateStats: (isCorrect: boolean) => void;
   words: Ref<Favorite[]>;
   changeCorrectAnswer: (answer: string) => void;
   nextWord: () => void;
@@ -26,6 +24,7 @@ export const useProgress = ({
   const toast = useToast();
   const showErrorModal = useState("showErrorModal", () => false);
   const feedbackMessage = useState("feedbackMessage", () => "");
+  const { updateStats } = useStatistics();
 
   // Проверка ответа при вводе текста с учетом опечаток
   function checkTyping() {

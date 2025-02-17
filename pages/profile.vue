@@ -4,8 +4,8 @@
 
     <UCard class="mt-4 p-4">
       <h2 class="text-lg font-bold">Statistics</h2>
-      <p>Correct answers: {{ stats.correct }}</p>
-      <p>Errors: {{ stats.incorrect }}</p>
+      <p>Correct answers: {{ data?.correct }}</p>
+      <p>Errors: {{ data?.incorrect }}</p>
       <p>Success rate: {{ successRate }}%</p>
       <p>Learned words: {{ learnedWords?.length }}</p>
     </UCard>
@@ -24,8 +24,14 @@
 <script setup lang="ts">
 import { useStatistics } from "~/composables/statistics";
 import type { Favorite } from "~/types/word";
+import type { UserStats } from "~/types/user";
 
-const { stats, successRate } = useStatistics();
+const { successRate, fetchUserStats } = useStatistics();
+
+const { data } = useLazyAsyncData(
+  "user-stats",
+  async (): Promise<UserStats | undefined> => await fetchUserStats()
+);
 
 const words = useState<Favorite[]>("words");
 
