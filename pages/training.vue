@@ -38,7 +38,7 @@ const { status } = await useLazyAsyncData(
   async (): Promise<TResponse<Favorite>> => {
     try {
       const res = await $fetch<TResponse<Favorite>>(
-        `http://localhost:1337/api/favorites?filters[$and][0][user][id][$eq]=${id}`,
+        `http://http://10.80.22.4:1337/api/favorites?filters[$and][0][user][id][$eq]=${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

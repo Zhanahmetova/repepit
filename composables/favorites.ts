@@ -16,7 +16,7 @@ export const useFavorites = () => {
   async function addToFavorites(word?: Word) {
     if (!word) return;
     try {
-      await $fetch("http://localhost:1337/api/favorites", {
+      await $fetch("http://http://10.80.22.4:1337/api/favorites", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${authStore.token}`,
@@ -49,7 +49,7 @@ export const useFavorites = () => {
     if (!id) return;
     try {
       const { data } = await $fetch<TResponse<Favorite>>(
-        `http://localhost:1337/api/favorites/${id}`,
+        `http://http://10.80.22.4:1337/api/favorites/${id}`,
         {
           method: "DELETE",
           headers: {
@@ -99,7 +99,7 @@ export const useFavorites = () => {
 
     try {
       const res = await $fetch<TResponse<Favorite>>(
-        `http://localhost:1337/api/favorites?populate[word][populate][0]=alternative_translations&${query}`,
+        `http://http://10.80.22.4:1337/api/favorites?populate[word][populate][0]=alternative_translations&${query}`,
         {
           headers: {
             Authorization: `Bearer ${authStore.token}`,

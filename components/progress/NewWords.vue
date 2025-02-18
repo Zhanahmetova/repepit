@@ -50,7 +50,7 @@ const words = useState<Word[]>("all-words", () => []);
 useLazyAsyncData("all-words", async () => {
   try {
     const wordsRes = await $fetch<TResponse<Word>>(
-      `http://localhost:1337/api/words`,
+      `http://http://10.80.22.4:1337/api/words`,
       {
         headers: {
           Authorization: `Bearer ${authStore.token}`,

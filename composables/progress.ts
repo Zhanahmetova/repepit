@@ -141,21 +141,24 @@ export const useProgress = ({
     nextReview.setDate(nextReview.getDate() + interval);
 
     try {
-      await $fetch(`http://localhost:1337/api/favorites/${progressId}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
-        body: {
-          data: {
-            next_review: nextReview.toISOString(),
-            repetition,
-            ease_factor: easeFactor,
-            interval,
-            is_learned: isLearned,
+      await $fetch(
+        `http://http://10.80.22.4:1337/api/favorites/${progressId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
           },
-        },
-      });
+          body: {
+            data: {
+              next_review: nextReview.toISOString(),
+              repetition,
+              ease_factor: easeFactor,
+              interval,
+              is_learned: isLearned,
+            },
+          },
+        }
+      );
       console.log("✅ Word progress updated");
 
       feedbackMessage.value = "";

@@ -14,7 +14,7 @@ export const useAuthStore = defineStore("auth", {
     async login(identifier: string, password: string) {
       try {
         const { data } = await useFetch<UserResponse>(
-          "http://localhost:1337/api/auth/local",
+          "http://http://10.80.22.4:1337/api/auth/local",
           {
             method: "POST",
             body: { identifier, password },
@@ -36,7 +36,7 @@ export const useAuthStore = defineStore("auth", {
     async register(username: string, email: string, password: string) {
       try {
         const { data } = await useFetch<UserResponse>(
-          "http://localhost:1337/api/auth/local/register",
+          "http://http://10.80.22.4:1337/api/auth/local/register",
           {
             method: "POST",
             body: { username, email, password },
@@ -59,7 +59,7 @@ export const useAuthStore = defineStore("auth", {
     async fetchUser() {
       try {
         const { data } = await useFetch<User>(
-          "http://localhost:1337/api/users/me",
+          "http://http://10.80.22.4:1337/api/users/me",
           {
             headers: { Authorization: `Bearer ${this.token}` },
           }

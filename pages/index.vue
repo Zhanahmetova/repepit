@@ -66,7 +66,7 @@ const { data, error, status } = useLazyAsyncData<TResponse<Word>>(
   "words",
   () =>
     $fetch<TResponse<Word>>(
-      `http://localhost:1337/api/words?populate[favorites][populate]=user&populate[favorites][populate]=word&pagination[page]=${page.value}&pagination[pageSize]=21`,
+      `http://http://10.80.22.4:1337/api/words?populate[favorites][populate]=user&populate[favorites][populate]=word&pagination[page]=${page.value}&pagination[pageSize]=21`,
       {
         headers: {
           Authorization: `Bearer ${authStore.token}`,

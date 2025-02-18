@@ -20,7 +20,7 @@ export const useStatistics = () => {
   // Создаем запись статистики для нового пользователя
   async function createUserStats() {
     const createdStat = await $fetch<TResponse<UserStats>>(
-      "http://localhost:1337/api/user-stats-list",
+      "http://http://10.80.22.4:1337/api/user-stats-list",
       {
         method: "POST",
         headers: {
@@ -45,7 +45,7 @@ export const useStatistics = () => {
   async function fetchUserStats() {
     try {
       const res = await $fetch<TResponse<UserStats>>(
-        `http://localhost:1337/api/user-stats-list?populate=*&filters[$and][0][user][id][$eq]=${authStore.user?.id}`,
+        `http://http://10.80.22.4:1337/api/user-stats-list?populate=*&filters[$and][0][user][id][$eq]=${authStore.user?.id}`,
         {
           headers: {
             Authorization: `Bearer ${authStore.token}`,
@@ -83,7 +83,7 @@ export const useStatistics = () => {
   async function saveUserStats() {
     try {
       const userStats = await $fetch<TResponse<UserStats>>(
-        `http://localhost:1337/api/user-stats-list?populate=*&filters[$and][0][user][id][$eq]=${authStore.user?.id}`,
+        `http://http://10.80.22.4:1337/api/user-stats-list?populate=*&filters[$and][0][user][id][$eq]=${authStore.user?.id}`,
         {
           headers: {
             Authorization: `Bearer ${authStore.token}`,
@@ -104,20 +104,23 @@ export const useStatistics = () => {
 
       console.log("Updating user stats:", statId);
 
-      await $fetch(`http://localhost:1337/api/user-stats-list/${statId}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-          "Content-Type": "application/json",
-        },
-        body: {
-          data: {
-            user: { connect: [authStore.user] },
-            correct: stats.correct,
-            incorrect: stats.incorrect,
+      await $fetch(
+        `http://http://10.80.22.4:1337/api/user-stats-list/${statId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+            "Content-Type": "application/json",
           },
-        },
-      });
+          body: {
+            data: {
+              user: { connect: [authStore.user] },
+              correct: stats.correct,
+              incorrect: stats.incorrect,
+            },
+          },
+        }
+      );
 
       console.log("User stats updated successfully!");
     } catch (error) {
