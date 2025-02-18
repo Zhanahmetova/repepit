@@ -3,26 +3,37 @@
     <template v-if="status === 'pending'">
       <UProgress animation="carousel" />
     </template>
+
+    <template v-if="sessionCompleted">
+      <div class="text-center">
+        <h2 class="text-2xl font-bold">🎉 Ура, на сегодня всё!</h2>
+        <UButton color="green" @click="startNewSession">
+          Начать новую сессию</UButton
+        >
+      </div>
+    </template>
+
     <template v-else>
-      <template v-if="!!data?.data?.length">
-        <Progress />
-      </template>
-      <template v-else>
-        <NewWords />
-      </template>
+      <Progress />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import NewWords from "~/components/progress/NewWords.vue";
 import type { TResponse } from "~/types/word";
 import type { Favorite } from "~/types/word";
+import { useSession } from "~/stores/session";
 
 const id = useCookie("user_id").value;
 const token = useCookie("access_token").value;
+const { sessionCompleted, setSessionCompleted } = useSession();
 
-const { data, status } = await useLazyAsyncData(
+const startNewSession = async () => {
+  setSessionCompleted(false);
+  await refreshNuxtData("favorite-words");
+};
+
+const { status } = await useLazyAsyncData(
   "user-favorites",
   async (): Promise<TResponse<Favorite>> => {
     try {
@@ -34,6 +45,8 @@ const { data, status } = await useLazyAsyncData(
           },
         }
       );
+      !res?.data?.length && navigateTo("/new-words");
+
       return res;
     } catch (err) {
       console.error("Error fetching favorites:", err);

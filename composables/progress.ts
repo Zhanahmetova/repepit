@@ -125,7 +125,7 @@ export const useProgress = ({
       // Если слово выбрано "Не знаю" или "Затрудняюсь" и оно не в избранном — добавляем его
       if (!wordProgress.is_learned) {
         await addToFavorites({
-          ...wordProgress.word,
+          ...wordProgress,
           repetition,
           interval,
           ease_factor: easeFactor,
@@ -161,7 +161,7 @@ export const useProgress = ({
       feedbackMessage.value = "";
     } catch (error) {
       await addToFavorites({
-        ...wordProgress.word,
+        ...wordProgress,
         repetition,
         interval,
         ease_factor: easeFactor,
@@ -188,19 +188,7 @@ export const useProgress = ({
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const nextWords = res.data
-          .filter((fav: Favorite) => {
-            const reviewDate = new Date(fav.next_review || "");
-            const diffDays =
-              (reviewDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
-            return diffDays <= 3;
-          })
-          .sort(
-            (a, b) =>
-              new Date(a.next_review || "").getTime() -
-              new Date(b.next_review || "").getTime()
-          )
-          .slice(0, 12);
+        const nextWords = res.data.slice(0, 12);
 
         if (nextWords.length > 0) {
           setSessionWords(nextWords);

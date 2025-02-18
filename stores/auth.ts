@@ -57,8 +57,6 @@ export const useAuthStore = defineStore("auth", {
     },
 
     async fetchUser() {
-      if (!this.token) return;
-
       try {
         const { data } = await useFetch<User>(
           "http://localhost:1337/api/users/me",
@@ -74,6 +72,10 @@ export const useAuthStore = defineStore("auth", {
         console.error("Failed to fetch user:", error);
         this.token = null;
         this.user = null;
+        this.userId = null;
+        useCookie("access_token").value = null;
+        useCookie("user_id").value = null;
+        navigateTo("/login");
       }
     },
 
@@ -81,9 +83,9 @@ export const useAuthStore = defineStore("auth", {
       this.token = null;
       this.user = null;
       this.userId = null;
+      this.userStatsId = null;
       useCookie("access_token").value = null;
       useCookie("user_id").value = null;
-      navigateTo("/login");
     },
   },
 });

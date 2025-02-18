@@ -113,9 +113,10 @@ import MiniCard from "~/components/word/MiniCard.vue";
 import Audio from "~/components/progress/Audio.vue";
 import { useProgress } from "~/composables/progress";
 
-const authStore = useAuthStore();
 const words = useState<Favorite[]>("words", () => []);
 const shuffledOptions = useState<string[]>("shuffledOptions", () => []);
+const { setSessionCompleted } = useSession();
+const token = useCookie("access_token").value;
 
 const trainingMode = useState<
   "default" | "multipleChoice" | "typing" | "audio"
@@ -234,30 +235,12 @@ const hasStartedTraining = useState(
   () => favoritesData?.data?.value?.data?.length === 0
 );
 
-// Если `favoritesData` пустой, загружаем слова из `words`
+// Если `favoritesData` пустой, перенаправляем на главную страницу
 watchEffect(async () => {
   if (favoritesData?.data?.value?.data?.length === 0) {
     try {
-      const wordsRes = await $fetch<TResponse<Word>>(
-        `http://localhost:1337/api/words`,
-        {
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
-        }
-      );
-
-      words.value = wordsRes.data.map((word) => ({
-        ...word,
-        ease_factor: 2.5,
-        interval: 1,
-        repetition: 0,
-        next_review: new Date().toISOString(),
-        is_learned: false,
-      }));
-    } catch (err) {
-      console.error("Error fetching words:", err);
-    }
+      navigateTo("/");
+    } catch (err) {}
   }
 });
 
@@ -267,8 +250,8 @@ function shuffleArray(array: string[]) {
 }
 
 function goToTraining() {
-  console.log("goToTraining");
+  setSessionCompleted(false);
   trainingMode.value = "typing";
-  hasStartedTraining.value = true; // Mark training as started
+  hasStartedTraining.value = true;
 }
 </script>
