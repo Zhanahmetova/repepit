@@ -11,9 +11,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    defaults:
-      run:
-        working-directory: /project
 
     steps:
       - uses: actions/checkout@v4
@@ -42,5 +39,4 @@ jobs:
         uses: nuxt-hub/action@v1
         id: deploy
         with:
-          project-key: repepit-y93p
-          directory: /project/dist
+          project-key: repepit-2k26
